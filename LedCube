@@ -1,0 +1,142 @@
+/*
+	Led küp grafik kütüphanesi 4x4 d-type register ile yapıldı
+	by Anıl GENÇER 13.05.2016 20:57
+*/
+
+#include "Arduino.h"
+#include "LedCube.h"
+
+LedCube::LedCube(){
+	DDRB = B00101111;//OUTPUT
+	DDRD = B11111111;//OUTPUT
+}
+
+void LedCube::tara(){
+	char i=0, j=0;
+	for(i=0;i<4;i++){
+		PORTB=1<<5;//çıkış off
+		for(j=0;j<4;j++){
+		  veriGonder(bellek[i][j],i,j);
+		}
+		PORTB|=1<<i;//katmanı seç
+		PORTB&=~(1<<5);//çıkış aktif
+		delay(1);
+	}
+}
+
+void LedCube::veriGonder(char x, char y, char z){
+	PORTD=x;//veriyi belirle, clock goes low
+	PORTD|=1<<z+4;//veriyi kaydet, clock goes high	
+}
+
+void LedCube::temizle(){
+  byte i=0, j=0;
+  for(i=0;i<4;i++)
+    for(j=0;j<4;j++)
+      bellek[i][j]=0;
+}
+void LedCube::ledYak(char x, char y, char z){
+	if(!menzilde(x,y,z))
+		return;
+	
+	bellek[y][z]|=1<<x;;
+}
+void LedCube::ledSondur(char x, char y, char z){
+	if(!menzilde(x,y,z))
+		return;
+	
+	bellek[y][z]&=~(1<<x);
+}
+void LedCube::ledToggle(char x, char y, char z){
+	if(yaniyor(x,y,z))
+		ledSondur(x,y,z);
+	else
+		ledYak(x,y,z);
+}
+bool LedCube::yaniyor(char x, char y, char z){
+	if(!menzilde(x,y,z))
+		return false;
+	
+	return bellek[y][z]&(1<<x);
+}
+
+void LedCube::ledY(char x, char y, char z, bool yon){
+	if(yaniyor(x,y,z)){
+		ledSondur(x,y,z);
+		if(yon)
+		  ledYak(x,y+1,z);
+		else if(!yon)
+		  ledYak(x,y-1,z);
+	}
+}
+
+bool LedCube::menzilde(char x, char y, char z){
+	return (x<4 && x>=0 && y<4 && y>=0 && z<4 && z>=0)?true:false;
+}
+
+void LedCube::kaydirY(char yon){
+	char i=0,j=0;
+	
+	if(yon==-1){
+		for(i=0;i<3;i++)
+			for(j=0;j<4;j++)
+				bellek[i][j]=bellek[i+1][j];
+	}
+	else if(yon==1){
+		for(i=3;i>0;i--)
+			for(j=0;j<4;j++)
+				bellek[i][j]=bellek[i-1][j];
+	}
+	for(j=0;j<4;j++)
+		bellek[yon==1?0:3][j]=0;
+}
+
+void LedCube::kaydirZ(char yon){
+	char i=0,j=0;
+	
+	if(yon==-1){
+		for(i=0;i<4;i++)
+			for(j=0;j<3;j++)
+				bellek[i][j]=bellek[i][j+1];
+	}
+	else if(yon==1){
+		for(i=0;i<4;i++)
+			for(j=3;j>0;j--)
+				bellek[i][j]=bellek[i][j-1];
+	}
+	for(j=0;j<4;j++)
+		bellek[j][yon==1?0:3]=0;
+	
+}
+
+void LedCube::kaydirX(char yon){
+	char i=0,j=0;
+	
+	if(yon==-1){
+		for(i=0;i<4;i++)
+			for(j=0;j<4;j++)
+				bellek[i][j]>>=1;
+	}
+	else if(yon==1){
+		for(i=0;i<4;i++)
+			for(j=0;j<4;j++)
+				bellek[i][j]=0x0f & bellek[i][j]<<1; // we use only first four bits allright :)
+	}
+}
+
+void LedCube::yakX(char x){
+	char i=0, j=0;
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+			bellek[i][j]|=1<<x;
+}
+void LedCube::yakZ(char z){
+	char i=0;
+		for(i=0;i<4;i++)
+			bellek[i][z]=0x0f;
+}
+void LedCube::yakY(char y){
+	byte i=0;
+	for(i=0;i<4;i++)
+		bellek[y][i]=0x0f;
+}
